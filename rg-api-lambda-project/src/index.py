@@ -1,47 +1,51 @@
+# This is an AWS Lambda function that creates a VPC and subnets, lists VPCs, and deletes VPCs.
+
+# import necessary libraries
 import json
 import boto3
-import os
+import src.logutil as logutil
+logger = logutil.getLogger()
 
 ec2 = boto3.client('ec2')
 dynamodb = boto3.resource('dynamodb')
-#table = dynamodb.Table(os.environ['TABLE_NAME'])
 table = dynamodb.Table('rg-test-api-lambda-dynamodb')
-#API_KEY = os.environ['API_KEY']
 
 def lambda_handler(event, context):
+    # get the data from the event
+    logger.info("*** Starting Lambda function ***")
     path = event['resource']
     method = event['httpMethod']
-    try:
-        cidr_block = event.get('body').get('cidr_block')
-        subnet_cidrs = event.get('body').get('subnet_cidrs')
-    except AttributeError:
-        cidr_block = None
-        subnet_cidrs = None
 
     if path == "/create" and method == "POST":
+        logger.info("*** This is a POST request to create a VPC ***")
+        cidr_block = event.get('body').get('cidr_block')
+        subnet_cidrs = event.get('body').get('subnet_cidrs')
         return create_vpc(cidr_block, subnet_cidrs)
     elif path == "/vpcs" and method == "GET":
+        logger.info("*** This is a GET request to list VPCs ***")
         return list_vpcs()
-    elif path == "/delete" and method == "POST":
-        return delete_vpcs()
     else:
         return response(404, {"error": "Not found"})
 
 def create_vpc(cidr_block, subnet_cidrs):
     try:
-        vpc = ec2.create_vpc(CidrBlock=cidr_block,
-        TagSpecifications = [
+        logger.info("*** Creating VPC ***")
+        vpc = (ec2.create_vpc
+        (
+            CidrBlock=cidr_block,
+            TagSpecifications =
+        [
             {
                 'ResourceType': 'vpc',
-                'Tags': [
+                'Tags':
+                [
                     {
                         'Key': 'Name',
                         'Value': 'rg-test-vpc'
                     }
                 ]
             }
-        ]
-        )
+        ]))
         vpc_id = vpc['Vpc']['VpcId']
 
         ec2.modify_vpc_attribute(VpcId=vpc_id, EnableDnsSupport={'Value': True})
@@ -49,9 +53,10 @@ def create_vpc(cidr_block, subnet_cidrs):
 
         subnet_ids = []
         for cidr in subnet_cidrs:
+            logger.info("*** Creating Subnets ***")
             subnet = ec2.create_subnet(CidrBlock=cidr, VpcId=vpc_id)
             subnet_ids.append(subnet['Subnet']['SubnetId'])
-
+        logger.info("*** Updating DynamoDB ***")
         table.put_item(Item={
             'vpc_id': vpc_id,
             'cidr_block': cidr_block,
@@ -61,36 +66,18 @@ def create_vpc(cidr_block, subnet_cidrs):
         return response(200, {"vpc_id": vpc_id, "subnet_ids": subnet_ids})
 
     except Exception as e:
+        logger.error("*** Error creating VPC or Subnets ***")
         return response(500, {"error": str(e)})
 
 def list_vpcs():
     try:
-        dynamodb = boto3.resource('dynamodb', region_name="us-east-2")
         dynamodb_table = dynamodb.Table('rg-test-api-lambda-dynamodb')
+        logger.info("*** Getting the items from dynamoDB ***")
         items = dynamodb_table.scan()
         return response(200, items)
     except Exception as e:
+        logger.error("*** Error calling dynamoDB ***")
         return response(500, {"error": str(e)})
-
-def delete_vpcs():
-    try:
-        dynamodb = boto3.resource('dynamodb', region_name="us-east-2")
-        dynamodb_table = dynamodb.Table('rg-test-api-lambda-dynamodb')
-        items = dynamodb_table.scan()
-        for item in items['Items']:
-            vpc_id = item['vpc_id']
-            ec2_resource = boto3.resource('ec2')
-            vpc_resources = ec2_resource.Vpc(vpc_id)
-            for subnet in vpc_resources.subnets.all():
-                print(f"Deleting subnet: {subnet.id}")
-                #subnet.delete()
-            print(f"Deleting vpc: {vpc_id}")
-            #ec2.delete_vpc(VpcId=vpc_id)
-            #dynamodb_table.delete_item(Key={'vpc_id': vpc_id})
-        return response(200, items)
-    except Exception as e:
-        return response(500, {"error": str(e)})
-
 
 def response(code, body):
     return {
