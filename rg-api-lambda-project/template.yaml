@@ -1,0 +1,334 @@
+AWSTemplateFormatVersion: 2010-09-09
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  SAM Template for rg-vpc-create-project
+  By: Rahul Gangadharan
+
+Globals:
+  Function:
+    Timeout: 300
+    MemorySize: 128
+
+Parameters:
+  Subnets:
+    Description: Subnets for lambda
+    Type: CommaDelimitedList
+    Default: subnet-0419ee49cb88df4bb
+  SecurityGroupIds:
+    Description: Security Group Ids for lambda
+    Type: CommaDelimitedList
+    Default: sg-0f9e4dfc04ceba8d6
+  APIName:
+    Description: Name for apigw
+    Type: String
+    Default: rg-test-api
+  LambdaName:
+    Description: Name for lambda
+    Type: String
+    Default: rg-test-api-lambda
+  DynamoDbName:
+    Description: Name for dynamodb table
+    Type: String
+    Default: rg-test-api-lambda-dynamodb
+
+Resources:
+  rgTestApiLambdaDynamoDB:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub ${DynamoDbName}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: vpc_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: vpc_id
+          KeyType: HASH
+      Tags:
+        - Key: APPACCESS
+          Value: rg
+        - Key: GROUP
+          Value: shs-rg
+        - Key: Project
+          Value: !Sub ${LambdaName}
+        - Key: COSTCENTER
+          Value: 1234
+
+  rgLambdaRole:
+    Type: AWS::IAM::Role
+    DependsOn: rgTestApiLambdaDynamoDB
+    Properties:
+      RoleName: !Sub ${LambdaName}-SR-Lambda
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: rg-dynamodb-data-policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:Query
+                  - dynamodb:PutItem
+                  - dynamodb:DeleteItem
+                  - dynamodb:Scan
+                Resource: !GetAtt rgTestApiLambdaDynamoDB.Arn
+        - PolicyName: hsarch-CW-createloggroup-policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                Resource: !Sub arn:aws:logs:${AWS::Region}:257676781382:*
+        - PolicyName: hsarch-CW-createlogstream-policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource:
+                  - !Sub arn:aws:logs:${AWS::Region}:257676781382:log-group:/aws/lambda/${LambdaName}:*
+        - PolicyName: rg-VPCforlambda-policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ec2:DeleteTags
+                  - ec2:DescribeVpcs
+                  - ec2:CreateTags
+                  - ec2:CreateVpc
+                  - ec2:ModifyVpcAttribute
+                  - ec2:AssociateVpcCidrBlock
+                  - ec2:CreateSubnet
+                  - ec2:DescribeNetworkInterfaces
+                  - ec2:CreateNetworkInterface
+                  - ec2:DeleteNetworkInterface
+                  - ec2:DescribeInstances
+                  - ec2:AttachNetworkInterface
+                Resource: "*"
+
+  rgLambda:
+    Type: AWS::Serverless::Function
+    DependsOn: [ rgLambdaRole , rgTestApiLambdaDynamoDB ]
+    Properties:
+      Environment:
+        Variables:
+          DYNAMODB_TABLE: !Sub ${DynamoDbName}
+      PackageType: Image
+      FunctionName: !Sub ${LambdaName}
+      Architectures:
+        - x86_64
+      Role: !GetAtt rgLambdaRole.Arn
+      VpcConfig:
+        SecurityGroupIds: !Ref SecurityGroupIds
+        SubnetIds: !Ref Subnets
+      ImageConfig:
+        Command: [ "src.index.lambda_handler" ]
+      Tags:
+        APPACCESS: rg
+        GROUP: shs-rg
+        COSTCENTER: 1234
+    Metadata:
+      Dockerfile: Dockerfile
+      DockerContext: .
+      DockerTag: v1
+
+  rgTestRestAPI:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      ApiKeySourceType: HEADER
+      Description: Rest API Used for OKTA Lambda Authentication
+      DisableExecuteApiEndpoint: False
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+      Name: !Sub ${APIName}
+      Tags:
+        - Key: APPACCESS
+          Value: rg
+        - Key: GROUP
+          Value: shs-rg
+        - Key: COSTCENTER
+          Value: 1234
+        - Key: Project
+          Value: !Sub ${LambdaName}
+  POSTResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !GetAtt rgTestRestAPI.RootResourceId  # Reference to the root resource
+      RestApiId: !Ref rgTestRestAPI
+      PathPart: "create"
+  GETResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !GetAtt rgTestRestAPI.RootResourceId  # Reference to the root resource
+      RestApiId: !Ref rgTestRestAPI
+      PathPart: "vpcs"
+
+  rgAPIKey:
+    Type: AWS::ApiGateway::ApiKey
+    DependsOn: [ rgTestRestAPI , rgAPIGatewayDeployment ]
+    Properties:
+      Description: API Key Used for Authentication
+      Enabled: True
+      Name: !Sub ${APIName}-api-key
+      StageKeys:
+        - RestApiId: !GetAtt rgTestRestAPI.RestApiId
+          StageName: !Sub ${AWS::Region}-${APIName}-${AWS::StackName}-Stage
+      Tags:
+        - Key: APPACCESS
+          Value: rg
+        - Key: GROUP
+          Value: shs-rg
+        - Key: COSTCENTER
+          Value: 1234
+        - Key: Project
+          Value: !Sub ${LambdaName}
+
+  rgRestUsagePlan:
+    Type: AWS::ApiGateway::UsagePlan
+    DependsOn: [ rgTestRestAPI  , rgAPIKey ]
+    Properties:
+      ApiStages:
+        - ApiId: !GetAtt rgTestRestAPI.RestApiId
+          Stage: !Sub ${AWS::Region}-${APIName}-${AWS::StackName}-Stage
+      Description: API Usage Plan Used for Authentication
+      Quota:
+        Limit: 500
+        Period: DAY
+      Tags:
+        - Key: APPACCESS
+          Value: rg
+        - Key: GROUP
+          Value: shs-rg
+        - Key: COSTCENTER
+          Value: 1234
+        - Key: Project
+          Value: !Sub ${LambdaName}
+      Throttle:
+        BurstLimit: 50
+        RateLimit: 50
+      UsagePlanName: !Sub ${APIName}-usage-plan
+
+  rgUsagePlanKey:
+    Type: AWS::ApiGateway::UsagePlanKey
+    DependsOn: [ rgAPIKey , rgRestUsagePlan ]
+    Properties:
+      KeyId: !GetAtt rgAPIKey.APIKeyId
+      KeyType: API_KEY
+      UsagePlanId: !GetAtt rgRestUsagePlan.Id
+
+  rgAPIGatewayRole:
+    Type: AWS::IAM::Role
+    DependsOn: rgLambda
+    Properties:
+      RoleName: !Sub ${LambdaName}-SR-ApiGateway
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: apigateway.amazonaws.com
+            Action: sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: rg-invoke-lambda-policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: lambda:InvokeFunction
+                Resource:
+                  - !GetAtt rgLambda.Arn
+      Tags:
+        - Key: APPACCESS
+          Value: rg
+        - Key: GROUP
+          Value: shs-rg
+        - Key: COSTCENTER
+          Value: 1234
+        - Key: Project
+          Value: !Sub ${LambdaName}
+
+  rgAPIPushMethod:
+    Type: AWS::ApiGateway::Method
+    DependsOn: [  rgTestRestAPI, rgAPIGatewayRole ]
+    Properties:
+      ApiKeyRequired: True
+      AuthorizationType: NONE
+      HttpMethod: POST
+      Integration:
+        Credentials: !GetAtt rgAPIGatewayRole.Arn
+        IntegrationHttpMethod: POST
+        RequestTemplates:
+          application/json: |
+            {
+              "resource": "$context.resourcePath",
+              "httpMethod": "$context.httpMethod",
+              "body": {
+                "cidr_block": "10.233.148.128/25",
+                "subnet_cidrs": [
+                  "10.233.148.128/26",
+                  "10.233.148.192/26"
+                ]
+              }
+            }
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseTemplates:
+              application/json: Empty
+        PassthroughBehavior: WHEN_NO_MATCH
+        Type: AWS
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${rgLambda.Arn}/invocations'
+      ResourceId: !Ref POSTResource
+      RestApiId: !GetAtt rgTestRestAPI.RestApiId
+      MethodResponses:
+        - StatusCode: 200
+          ResponseModels:
+            application/json: 'Empty'
+
+  rgAPIGetMethod:
+    Type: AWS::ApiGateway::Method
+    DependsOn: [ rgTestRestAPI, rgAPIGatewayRole ]
+    Properties:
+      ApiKeyRequired: True
+      AuthorizationType: NONE
+      HttpMethod: GET
+      Integration:
+        IntegrationHttpMethod: GET
+        Credentials: !GetAtt rgAPIGatewayRole.Arn
+        RequestTemplates:
+            application/json: |
+              {
+                "resource": "$context.resourcePath",
+                "httpMethod": "$context.httpMethod",
+                "body": "$input.body"
+              }
+        IntegrationResponses:
+          - StatusCode: 200
+        PassthroughBehavior: WHEN_NO_MATCH
+        Type: AWS
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${rgLambda.Arn}/invocations'
+      ResourceId: !Ref GETResource
+      RestApiId: !GetAtt rgTestRestAPI.RestApiId
+      MethodResponses:
+        - StatusCode: 200
+
+  rgAPIGatewayDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn: [ rgTestRestAPI , rgAPIPushMethod, rgAPIGetMethod, POSTResource, GETResource ]
+    Properties:
+      RestApiId: !GetAtt rgTestRestAPI.RestApiId
+      StageName: !Sub ${AWS::Region}-${APIName}-${AWS::StackName}-Stage
