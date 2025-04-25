@@ -15,7 +15,6 @@ def lambda_handler(event, context):
     logger.info("*** Starting Lambda function ***")
     path = event['resource']
     method = event['httpMethod']
-
     if path == "/create" and method == "POST":
         logger.info("*** This is a POST request to create a VPC ***")
         cidr_block = event.get('body').get('cidr_block')
@@ -76,6 +75,10 @@ def list_vpcs():
         dynamodb_table = dynamodb.Table('rg-test-api-lambda-dynamodb')
         logger.info("*** Getting the items from dynamoDB ***")
         items = dynamodb_table.scan()
+        vpc_id = items['Items'][0]['vpc_id']
+        logger.info(f"*** VPC ID: {vpc_id} ***")
+        subnet_id = items['Items'][0]['subnet_ids']
+        logger.info(f"*** Subnet ID: {subnet_id} ***")
         return response(200, items)
     except Exception as e:
         logger.error("*** Error calling dynamoDB ***")
