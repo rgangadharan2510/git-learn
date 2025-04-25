@@ -45,6 +45,7 @@ The function is deployed under the name: **rg-test-api-lambda**
 * **Dockerfile:** The Dockerfile for building the Lambda function container image.
 * **README.md:** The README file for the Lambda function.
 * **template.yaml:** SAM template file for installing the infrastructure.
+* **.github/workflows/rg-api-lambda-project.yml:** The GitHub Actions workflow for deploying the components.
 
 ## Implementation:
 The entire solution is deployed through an automated CI/CD pipeline. A **Serverless Application Model (SAM)** template 
