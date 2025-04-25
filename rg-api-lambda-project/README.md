@@ -38,6 +38,14 @@ The function is deployed under the name: **rg-test-api-lambda**
 * **IAM Roles:** rg-test-api-lambda-SR-ApiGateway, rg-test-api-lambda-SR-Lambda
 * **ECR repo:** rg-api-lambda-project
 
+## Artifacts:
+* **src/index.py:** The main Lambda function code.
+* **src/logutil.py:** The log handling function.
+* **requirements.txt:** The dependencies for the Lambda function.
+* **Dockerfile:** The Dockerfile for building the Lambda function container image.
+* **README.md:** The README file for the Lambda function.
+* **template.yaml:** SAM template file for installing the infrastructure.
+
 ## Implementation:
 The entire solution is deployed through an automated CI/CD pipeline. A **Serverless Application Model (SAM)** template 
 is utilized to define and provision the infrastructure via a CloudFormation stack. Deployment is orchestrated using a 
