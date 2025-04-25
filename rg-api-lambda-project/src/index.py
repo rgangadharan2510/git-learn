@@ -47,6 +47,7 @@ def create_vpc(cidr_block, subnet_cidrs):
             }
         ]))
         vpc_id = vpc['Vpc']['VpcId']
+        logger.info(f"*** VPC Created *** vpc_id: {vpc_id}")
 
         ec2.modify_vpc_attribute(VpcId=vpc_id, EnableDnsSupport={'Value': True})
         ec2.modify_vpc_attribute(VpcId=vpc_id, EnableDnsHostnames={'Value': True})
@@ -56,6 +57,7 @@ def create_vpc(cidr_block, subnet_cidrs):
             logger.info("*** Creating Subnets ***")
             subnet = ec2.create_subnet(CidrBlock=cidr, VpcId=vpc_id)
             subnet_ids.append(subnet['Subnet']['SubnetId'])
+        logger.info(f"*** Subnets Created *** subnet_ids: {subnet_ids}")
         logger.info("*** Updating DynamoDB ***")
         table.put_item(Item={
             'vpc_id': vpc_id,
@@ -80,6 +82,7 @@ def list_vpcs():
         return response(500, {"error": str(e)})
 
 def response(code, body):
+    logger.info("*** Exiting Program ***")
     return {
         "statusCode": code,
         "headers": {"Content-Type": "application/json"},
