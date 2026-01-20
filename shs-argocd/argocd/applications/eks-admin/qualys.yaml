@@ -29,7 +29,7 @@ spec:
         path: '{{path}}'
         targetRevision: main
       destination:
-        name: '{{name}}'
+        name: https://kubernetes.default.svc
         namespace: qualys
       syncPolicy:
         syncOptions:
@@ -44,5 +44,6 @@ spec:
             duration: 5s
             factor: 2
             maxDuration: 3m
+
 
 
