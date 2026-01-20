@@ -10,7 +10,7 @@ spec:
           - appName: qualys.shs-nextgen-stage.hsarch-eks-cluster 
             namespace: qualys
             name: in-cluster
-            path: apps/eks-admin/qualys/shs-nextgen-stage/hsarch-eks-cluster
+            path: shs-argocd/apps/eks-admin/qualys/shs-nextgen-stage/hsarch-eks-cluster
             project: shs-nextgen-stage.hsarch-eks-cluster
   template:
     metadata:
@@ -44,4 +44,5 @@ spec:
             duration: 5s
             factor: 2
             maxDuration: 3m
+
 
