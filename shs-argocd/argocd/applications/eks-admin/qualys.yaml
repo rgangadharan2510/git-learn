@@ -1,0 +1,46 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: qualys-appset
+  namespace: argocd
+spec:
+  generators:
+    - list:
+        elements:
+          - appName: qualys.shs-nextgen-stage.hsarch-eks-cluster 
+            namespace: qualys
+            name: shs-nextgen-stage/hsarch-eks-cluster
+            path: apps/eks-admin/qualys/shs-nextgen-stage/hsarch-eks-cluster
+            project: shs-nextgen-stage.hsarch-eks-cluster
+  template:
+    metadata:
+      name: '{{appName}}'
+      labels:
+        app: qualys
+        APPACCESS: hsarch
+        GROUP: shs-hsarch
+        Environment: stage
+      finalizers:
+        - resources-finalizer.argocd.argoproj.io
+    spec:
+      project: '{{project}}'
+      source:
+        repoURL: https://github.com/rgangadharan2510/git-learn.git
+        path: '{{path}}'
+        targetRevision: main
+      destination:
+        name: '{{name}}'
+        namespace: qualys
+      syncPolicy:
+        syncOptions:
+          - CreateNamespace=true
+          - PruneLast=true
+          - ServerSideApply=true
+          - RespectIgnoreDifferences=true
+          - ApplyOutOfSyncOnly=true
+        retry:
+          limit: 5
+          backoff:
+            duration: 5s
+            factor: 2
+            maxDuration: 3m
