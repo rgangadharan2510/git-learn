@@ -3,4 +3,3 @@ kind: Kustomization
 namespace: qualys
 resources:
   - ../../base
-  - sealed-secret.yaml
