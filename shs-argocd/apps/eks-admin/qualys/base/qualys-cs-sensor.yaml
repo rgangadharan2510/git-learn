@@ -1,8 +1,5 @@
-kind: List
 apiVersion: v1
-items:
-  # Create custom namespace qualys
-  - kind: Namespace
-    apiVersion: v1
-    metadata:
-      name: qualys
+kind: Namespace
+metadata:
+  name: qualys
+
