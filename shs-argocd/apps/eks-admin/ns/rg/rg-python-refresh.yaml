@@ -21,3 +21,6 @@ spec:
           env:
             - name: S3_BUCKET
               value: "rg-python-refresh"
+      imagePullSecrets:
+         - name: ecr-secret
+      
