@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: rg-python-refresh
-          image: 523140806637.dkr.ecr.us-east-1.amazonaws.com/rg-python-refresh:latest
+          image: 257676781382.dkr.ecr.us-east-2.amazonaws.com/rg-python-refresh:latest
           imagePullPolicy: Always
           args: ["--download"]
           env:
@@ -24,3 +24,4 @@ spec:
       imagePullSecrets:
          - name: ecr-secret
       
+
