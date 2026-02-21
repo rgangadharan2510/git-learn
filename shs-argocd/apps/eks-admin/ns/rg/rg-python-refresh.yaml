@@ -35,11 +35,12 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: aws-secret
-              key: AWS_DEFAULT_REGION
+                  key: AWS_DEFAULT_REGION
   
       imagePullSecrets:
          - name: ecr-secret
       
+
 
 
 
