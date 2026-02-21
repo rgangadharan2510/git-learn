@@ -21,7 +21,7 @@ spec:
           env:
             - name: S3_BUCKET
               value: "rg-python-refresh"
-                - name: AWS_ACCESS_KEY_ID
+            - name: AWS_ACCESS_KEY_ID
               valueFrom:
                 secretKeyRef:
                   name: aws-secret
@@ -40,5 +40,6 @@ spec:
       imagePullSecrets:
          - name: ecr-secret
       
+
 
 
