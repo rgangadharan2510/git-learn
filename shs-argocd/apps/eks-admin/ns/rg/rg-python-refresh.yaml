@@ -27,9 +27,8 @@ spec:
             readOnly: true
       volumes:
         - name: aws-credentials
-          hostPath:
-            path: /home/rgangad/.aws
-            type: Directory
+          secret:
+            secretName: aws-credentials
             #- name: AWS_ACCESS_KEY_ID
             #  valueFrom:
             #    secretKeyRef:
@@ -49,6 +48,7 @@ spec:
       imagePullSecrets:
          - name: ecr-secret
       
+
 
 
 
