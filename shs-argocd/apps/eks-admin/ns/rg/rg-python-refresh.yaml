@@ -21,15 +21,15 @@ spec:
           env:
             - name: S3_BUCKET
               value: "rg-python-refresh"
-          volumeMounts:
+      volumeMounts:
         - name: aws-credentials
           mountPath: /root/.aws
           readOnly: true
       volumes:
-      - name: aws-credentials
-        hostPath:
-          path: /home/rgangad/.aws
-          type: Directory
+        - name: aws-credentials
+          hostPath:
+            path: /home/rgangad/.aws
+            type: Directory
             #- name: AWS_ACCESS_KEY_ID
             #  valueFrom:
             #    secretKeyRef:
@@ -49,6 +49,7 @@ spec:
       imagePullSecrets:
          - name: ecr-secret
       
+
 
 
 
