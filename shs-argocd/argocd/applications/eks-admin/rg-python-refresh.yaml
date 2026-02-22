@@ -6,9 +6,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/<your-repo>.git
+    repoURL: https://github.com/rgangadharan2510/git-learn.git
     targetRevision: main
-    path: manifests
+    path: shs-argocd/apps/eks-admin/ns/rg
   destination:
     server: https://kubernetes.default.svc
     namespace: default
