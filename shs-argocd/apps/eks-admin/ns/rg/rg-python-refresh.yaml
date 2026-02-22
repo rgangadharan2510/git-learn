@@ -26,20 +26,21 @@ spec:
                 secretKeyRef:
                   name: aws-secret
                   key: AWS_ACCESS_KEY_ID
-            - name: AWS_SECRET_ACCESS_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: aws-secret
-                  key: AWS_SECRET_ACCESS_KEY
-            - name: AWS_DEFAULT_REGION
-              valueFrom:
-                secretKeyRef:
-                  name: aws-secret
-                  key: AWS_DEFAULT_REGION
+            #- name: AWS_SECRET_ACCESS_KEY
+            #  valueFrom:
+            #    secretKeyRef:
+            #      name: aws-secret
+            #      key: AWS_SECRET_ACCESS_KEY
+            #- name: AWS_DEFAULT_REGION
+            #  valueFrom:
+            #    secretKeyRef:
+            #      name: aws-secret
+            #     key: AWS_DEFAULT_REGION
   
       imagePullSecrets:
          - name: ecr-secret
       
+
 
 
 
