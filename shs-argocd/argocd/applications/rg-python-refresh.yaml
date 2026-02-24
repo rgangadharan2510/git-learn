@@ -8,7 +8,7 @@ spec:
   source:
     repoURL: https://github.com/rgangadharan2510/git-learn.git
     targetRevision: main
-    path: shs-argocd/apps/eks-admin/ns/rg
+    path: shs-argocd/apps/rg-python-minikube
   destination:
     server: https://kubernetes.default.svc
     namespace: default

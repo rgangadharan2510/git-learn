@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: python-refresh
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: python-refresh
+  template:
+    metadata:
+      labels:
+        app: python-refresh
+    spec:
+      containers:
+        - name: python-refresh
+          image: 257676781382.dkr.ecr.us-east-2.amazonaws.com/rg-prod-s3-upload-eks:latest
+          imagePullPolicy: Always
+          args: ["--download"]
+          env:
+            - name: S3_BUCKET
+              value: "rg-python-refresh"
+          volumeMounts:
+          - name: aws-credentials
+            mountPath: /root/.aws
+            readOnly: true
+      volumes:
+        - name: aws-credentials
+          secret:
+            secretName: aws-credentials
+      imagePullSecrets:
+         - name: ecr-secret
