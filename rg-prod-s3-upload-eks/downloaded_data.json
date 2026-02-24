@@ -1,0 +1,18 @@
+{
+  "application": "harvest-monitoring",
+  "environment": "prod",
+  "owner": "Rahul",
+  "services": [
+    {
+      "name": "fsx",
+      "status": "healthy",
+      "region": "us-east-2"
+    },
+    {
+      "name": "eks",
+      "status": "healthy",
+      "region": "us-east-1"
+    }
+  ]
+}
+
